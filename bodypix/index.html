@@ -1,0 +1,61 @@
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/body-pix@2.0"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.6.3/css/all.min.css">
+<button onclick="start()">start</button>
+<div>
+  <video id='input' width="320" height="240" autoplay muted playsinline style="border: solid 1px black; transform: scaleX(-1);"></video>
+  <span style="position:relative">
+    <span id='loadingicon' class="fa fa-spinner fa-spin" style="position:absolute;font-size:100px;margin-left:110px;margin-top:70px;display: none;"></span>
+    <canvas id='output' width="320" height="240" style="border: solid 1px black;"></canvas>
+  </span>
+</div>
+<script>
+async function setupCamera(videoElement) {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    'video': {
+      width: 320,
+      height: 240
+    },
+    'audio': false,
+  });
+  videoElement.srcObject = stream;
+  return new Promise((resolve) => {
+    videoElement.onloadedmetadata = () => {
+      videoElement.play();
+      resolve();
+    };
+  });
+}
+
+function segmentBody(input, output, bodypixnet) {
+  async function renderFrame() {
+    const segmentation = await bodypixnet.segmentPerson(input);
+    const backgroundBlurAmount = 3;
+    const edgeBlurAmount = 3;
+    const flipHorizontal = true;
+    bodyPix.drawBokehEffect(
+      output, input, segmentation, backgroundBlurAmount,
+      edgeBlurAmount, flipHorizontal);
+    requestAnimationFrame(renderFrame);
+  }
+  renderFrame();
+}
+
+function loading(onoff) {
+  document.getElementById('loadingicon').style.display = onoff ? 'inline' : 'none';
+}
+
+async function start() {
+  loading(true);
+  const input = document.getElementById('input');
+  if (input.srcObject) {
+    input.srcObject = null;
+  } else {
+    const output = document.getElementById('output');
+    await setupCamera(input);
+    const bodypixnet = await bodyPix.load();
+    segmentBody(input, output, bodypixnet);
+  }
+  loading(false);
+}
+</script>
