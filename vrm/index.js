@@ -48,9 +48,10 @@ function estimatePose(annotations) {
   const xaxis = x2.sub(x1).normalize();
   const yaxis = y2.sub(y1).normalize();
   const zaxis = new THREE.Vector3().crossVectors(xaxis, yaxis);
-  return new THREE.Matrix4().makeBasis(xaxis, yaxis, zaxis).premultiply(
-    new THREE.Matrix4().makeRotationZ(Math.PI*1)
+  const mat = new THREE.Matrix4().makeBasis(xaxis, yaxis, zaxis).premultiply(
+    new THREE.Matrix4().makeRotationZ(Math.PI)
   );
+  return new THREE.Quaternion().setFromRotationMatrix(mat);
 }
 
 function startRender(input, output, model) {
@@ -67,9 +68,9 @@ function startRender(input, output, model) {
         ctx.fill();
       });
       const annotations = face.annotations;
-      const mat = estimatePose(annotations);
+      const q = estimatePose(annotations);
       const head = vrm.humanoid.getBoneNode(THREE.VRMSchema.HumanoidBoneName.Head);
-      head.rotation.setFromRotationMatrix(mat);
+      head.quaternion.slerp(q, 0.1);
       const blink = Math.max( 0.0, 1.0 - 10.0 * Math.abs( ( clock.getElapsedTime() % 4.0 ) - 2.0 ) );
       vrm.blendShapeProxy.setValue(THREE.VRMSchema.BlendShapePresetName.Blink, blink);
       const lipsLowerInner = annotations.lipsLowerInner[5];
